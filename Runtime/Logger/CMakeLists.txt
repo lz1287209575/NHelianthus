@@ -1,16 +1,22 @@
 # Add Source Files
 set (
     LOGGER_SOURCE
-    Logger.cpp
+    LoggerManager.cpp
 )
 
 #Add Header Files
 set (
     LOGGER_HEADER
-    Logger.h
+    LoggerManager.h
     LoggerConfig.h
     LogLevel.h
+    BaseLogger.h
+    SimpleLogger.h
+    CategoryLogger.h
+    StructedLogger.h
 )
+
+include_directories(${CMAKE_SOURCE_DIR}/Runtime)
 
 # Create Library
 add_library(

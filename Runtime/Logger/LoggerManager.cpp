@@ -1,4 +1,4 @@
-#include "Logger.h"	
+#include "LoggerManager.h"	
 
 #include <memory>
 #ifdef _WIN32
@@ -7,24 +7,15 @@
 
 #include "spdlog/spdlog.h"
 #include "spdlog/pattern_formatter.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/sinks/rotating_file_sink.h"
+#include "spdlog/async.h"
 
 namespace Helianthus::Runtime
 {
-	namespace Logger
-	{
-		#pragma region Static Variables
-
-		std::shared_ptr<spdlog::logger> Logger::LoggerInstance;
-		LoggerConfig Logger::CurrentConfig;
-        bool Logger::IsInitializedFlag = false;
-        std::unordered_map<std::string, std::shared_ptr<spdlog::logger>> Logger::CategoryLoggers;
-        std::atomic_bool Logger::ShuttingDownFlag;
-        std::string Logger::ProcessName;
-
-		#pragma endregion
-
-		#pragma region Logger Formatter
-
+	namespace Log
+    {
+		// Logger Formatter
 		class HelianthusLogFormatter : public spdlog::custom_flag_formatter
 		{
         public:
@@ -68,10 +59,7 @@ namespace Helianthus::Runtime
             }
 		};
 
-		#pragma endregion
-
-        #pragma region Helper Functions
-
+		// Helper Functions
         static std::string Trim(const std::string& S)
         {
             auto StartPos = S.find_first_not_of(" \t\n\r");
@@ -102,7 +90,7 @@ namespace Helianthus::Runtime
             }
         }
 
-        LogLevel Logger::ConvertLogLevel(spdlog::level::level_enum Level)
+        LogLevel LoggerManager::ConvertLogLevel(spdlog::level::level_enum Level)
         {
             switch (Level)
             {
@@ -119,26 +107,87 @@ namespace Helianthus::Runtime
             }
         }
 
-		#pragma endregion 
+        // Private Constructor And Destructor
+        LoggerManager::LoggerManager() 
+        {
+            EnsureInitialized();
+        }
 
-        #pragma region LifeCycle Function
+        LoggerManager::~LoggerManager() 
+        {
+            EnsureShutdown();
+        }
 
-        void Logger::Initialize(const LoggerConfig& Config)
+		// LifeCycle Function
+        void LoggerManager::Initialize(const LoggerConfig& Config)
         {
             ShuttingDownFlag.store(false, std::memory_order_release);
 
-            #ifdef _WIN32
-            char Path[MAX_PATH];
-            if (GetModuleFileName(NULL, Path, MAX_PATH) != 0)
+            if (Config.EnableConsole)
             {
-                std::string FullProcessInfo = Trim(std::string(Path));
-                auto Pos = FullProcessInfo.find_last_of("\\/");
-                ProcessName = Pos == std::string::npos ? Path : FullProcessInfo.substr(Pos + 1);
+                auto ConsoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+                ConsoleSink->set_level(ConvertLogLevel(Config.Level));
+                Sinks.push_back(ConsoleSink);
             }
-            #endif
+
+            if (Config.EnableFile)
+            {
+                auto RotatingFileSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(Config.FilePath, Config.MaxFileSize, Config.MaxFiles);
+                RotatingFileSink->set_level(ConvertLogLevel(Config.Level));
+                Sinks.push_back(RotatingFileSink);
+            }
+
+            if (Sinks.empty())
+            {
+                throw std::runtime_error("No sinks configured for logger.");
+            }
+
+            if (Config.UseAsync)
+            {
+                spdlog::init_thread_pool(Config.QueueSize, Config.WorkerThreads);
+            }
+
+            IsInitializedFlag = true;
+
         }
 
-        #pragma endregion
+        void LoggerManager::Shutdown()
+        {
+            ShuttingDownFlag.store(true, std::memory_order_release);
+            if (CurrentConfig.UseAsync)
+            {
+                // Ensure thread pool is stopped
+                spdlog::shutdown();
+            }
 
-	} // namespace Logger
+            IsInitializedFlag = false;
+        }
+
+        void LoggerManager::EnsureInitialized()
+        {
+            if (!IsInitializedFlag)
+            {
+                Initialize(CurrentConfig);
+            }
+        }
+
+        void LoggerManager::EnsureShutdown()
+        {
+            if (IsInitializedFlag && !ShuttingDownFlag.load(std::memory_order_acquire))
+            {
+                Shutdown();
+            }
+        }
+
+        bool LoggerManager::IsInitialized()
+        {
+            return IsInitializedFlag;
+        }
+
+        bool LoggerManager::IsShutdown()
+        {
+            return ShuttingDownFlag.load(std::memory_order_acquire);
+        }
+
+	} // namespace Log
 } // namepsace Helianthus::Runtime

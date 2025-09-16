@@ -6,7 +6,7 @@
 
 namespace Helianthus::Runtime
 {
-    namespace Logger
+    namespace Log
     {
         struct LoggerConfig
         {
@@ -36,5 +36,5 @@ namespace Helianthus::Runtime
 			{
 			}
         };
-    } // namespace Logger
+    } // namespace Log
 } // namespace Helianthus::Runtime

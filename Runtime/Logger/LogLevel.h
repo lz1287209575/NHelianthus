@@ -4,7 +4,7 @@
 
 namespace Helianthus::Runtime
 {
-    namespace Logger
+    namespace Log
     {
         #if HELIANTHUS_DEBUG
             #define HELIANTHUS_DEFAULT_LOG_LEVEL LogLevel::Debug 
@@ -19,5 +19,5 @@ namespace Helianthus::Runtime
             Warn,
             Error,
         };
-    } // namespace Logger
+    } // namespace Log
 } // namespace Helianthus::Runtime

@@ -1,6 +1,7 @@
 # Add Subdirectory
 
 add_subdirectory(Logger)
+add_subdirectory(Platform)
 
 # Create Main Library
 add_library(helianthus_runtime INTERFACE)

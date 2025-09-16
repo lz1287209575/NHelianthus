@@ -76,10 +76,9 @@ include_directories(${CMAKE_SOURCE_DIR}/ThirdParty)
 if(NOT CMAKE_TOOLCHAIN_FILE)
     message(FATAL_ERROR "Please, run Conan first to generate the toolchain file.")
 endif()
-include(Intermidate/${CMAKE_TOOLCHAIN_FILE})
 
 # 设置 Conan 生成的配置文件路径
-list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/cmake/conan)
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/Intermediate)
 
 # 查找 Conan 依赖
 # PkgConfig 主要用于 Linux 系统，在 Windows 上使用 Conan 时通常不需要
